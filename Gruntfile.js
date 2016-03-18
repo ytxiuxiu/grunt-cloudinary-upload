@@ -36,6 +36,14 @@ module.exports = function(grunt) {
         },
         files: {
           'tmp/image_url_in_css.css': 'test/fixtures/css/image_url_in_css.css'
+        },
+      },
+      withRootOption: {
+        options: {
+          root: 'test/fixtures/'
+        },
+        files: {
+          'tmp/with_root_option.css': 'test/fixtures/css/image_url_in_css.css'
         }
       }
     },

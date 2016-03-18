@@ -90,8 +90,8 @@ module.exports = function(grunt) {
 
           // public id
           var publicId = replacement.absolute;
-          if (replacement.file.cwd) {
-            publicId = publicId.replace(replacement.file.cwd + '/', '');
+          if (options.root) {
+            publicId = publicId.replace(options.root + (options.root.endsWith('/') ? '' : '/'), '');
           }
           publicId = publicId.substring(0, publicId.indexOf('.'));
 

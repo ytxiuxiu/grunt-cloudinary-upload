@@ -68,18 +68,24 @@ Default value: `null`
 
 Your API Secret.
 
+#### options.root
+Type: `String`
+Default value: `null`
+
+The root folder of your source files which will be uploaded. By setting this, it can remove the content of the option at the beginning of the `public_id` (See: [All upload options](http://cloudinary.com/documentation/node_image_upload#all_upload_options))
+
+For example, if you set this option to `dist`, image file `dist/images/me.png` will be uploaded by `public_id = 'images/me'` instead of `public_id = 'dist/images/me'`. So that your url on Cloudinary will be `http://res.cloudinary.com/cloud-name/image/upload/version-number/images/me.png` instead of `http://res.cloudinary.com/cloud-name/image/upload/version-number/dist/images/me.png`
+
 #### options.imageTypes
 Type: `Array`
 Default value: `['png', 'jpg', 'jpeg', 'gif']`
 
-A array contains all extension names of images in your project. These kind of files will be uploaded to Cloudinary as an image. In another word, any other kind of files will be uploaded as raw file.
+A array contains all extension names of images in your project. These kind of files will be uploaded to Cloudinary as an image (`resource_type = 'image'`). In another word, any other kind of files will be uploaded as raw file (`resource_type = 'raw'`). (See: [All upload options](http://cloudinary.com/documentation/node_image_upload#all_upload_options))
 
 ### Usage Examples
 
 #### Default Options
-In this example, the default options are used to do something with whatever, except the account info. So if the `testing` file has the content `url(../images/me.png)`, the generated result would be `url(http://res.cloudinary.com/your-cloud-name/image/upload/some-version/images/me.png)`.
-
-Note: It is good to set `cwd` option and set it to a directory rather than a file, as it can remove the path of `cwd` in the url generated and it can not concat these files into one. In this example, if you do not set this parameter, the result would be `url(http://res.cloudinary.com/your-cloud-name/image/upload/some-version/path-to/images/me.png)`
+In this example, the default options are used to do something with whatever, except the account info. So if the `testing` file has the content `url(../images/me.png)`, the generated result would be `url(http://res.cloudinary.com/your-cloud-name/image/upload/some-version/path-to/images/me.png)`.
 
 ```js
 grunt.initConfig({

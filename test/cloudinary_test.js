@@ -40,4 +40,18 @@ exports.cloudinary = {
 
     test.done();
   },
+  witRootOption: function(test) {
+    test.expect(1);
+
+    var content = grunt.file.read('tmp/with_root_option.css');
+    var urls = content.match(/url(?:\s+)?\(([^\)]+)\)/igm);
+    var url = urls[0];
+    if (url.endsWith('images/me.png)') && !url.endsWith('test/fixtures/images/me.png)')) {
+      test.ok(true);
+    } else {
+      test.ok(false);
+    }
+
+    test.done();
+  },
 };
