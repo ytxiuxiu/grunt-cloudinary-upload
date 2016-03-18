@@ -1,6 +1,8 @@
 # grunt-cloudinary-upload
 
-> Uploads images, fonts, css, js files wto Cloudinary which are referenced in html and css files, and also upgrade these references automatically!
+> Uploads images, fonts, css, js files to Cloudinary which are referenced in html and css files, and also upgrade these references automatically!
+
+** Note: This project is deing developed. Currently, it supports uploading source files which are referenced in css files only.
 
 ## Getting Started
 This plugin requires Grunt `~0.4.5`
