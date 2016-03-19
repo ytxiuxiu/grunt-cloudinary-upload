@@ -45,7 +45,7 @@ module.exports = function(grunt) {
       },
       withRootOptionTest: {
         options: {
-          root: 'test/fixtures/'
+          roots: ['test/fixtures/']
         },
         files: {
           'tmp/css/with_root_option.css': 'test/fixtures/css/image_url_in_css.css'
@@ -57,10 +57,16 @@ module.exports = function(grunt) {
         }
       },
       multipleFilesTest: {
+        options: {
+          roots: [
+            'test/fixtures/',
+            'tmp'
+          ]
+        },
         files: [{
           expand: true,
           cwd: 'test/fixtures/',
-          src: ['**/*.css'],
+          src: ['**/*.html', '**/*.css'],
           dest: 'tmp/'
         }]
       }

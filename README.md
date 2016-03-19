@@ -2,8 +2,6 @@
 
 > Uploads images, fonts, css, js files to Cloudinary which are referenced in html and css files, and also upgrade these references automatically!
 
-** Note: This project is deing developed. Currently, it supports uploading source files which are referenced in css files only.
-
 ## Getting Started
 This plugin requires Grunt `~0.4.5`
 
@@ -70,13 +68,22 @@ Default value: `null`
 
 Your API Secret.
 
-#### options.root
-Type: `String`
+#### options.roots
+Type: `Array`
 Default value: `null`
 
-The root folder of your source files which will be uploaded. By setting this, it can remove the content of the option at the beginning of the `public_id` (See: [All upload options](http://cloudinary.com/documentation/node_image_upload#all_upload_options))
+The root folders of your source files which will be uploaded. By setting this, it can remove the content of the option at the beginning of the `public_id` (See: [All upload options](http://cloudinary.com/documentation/node_image_upload#all_upload_options))
 
-For example, if you set this option to `dist`, image file `dist/images/me.png` will be uploaded by `public_id = 'images/me'` instead of `public_id = 'dist/images/me'`. So that your url on Cloudinary will be `http://res.cloudinary.com/cloud-name/image/upload/version-number/images/me.png` instead of `http://res.cloudinary.com/cloud-name/image/upload/version-number/dist/images/me.png`
+Note: Please set it both the path of your `src` folder and your `dest` folder, as the html file which contains references to css file, may upload from your dest folder rather than `src` folder.
+
+```js
+roots: [
+  'src/',
+  'dist/'
+]
+```
+
+For example, if you set this option, image file `dist/images/me.png` will be uploaded by `public_id = 'images/me'` instead of `public_id = 'dist/images/me'`. So that your url on Cloudinary will be `http://res.cloudinary.com/cloud-name/image/upload/version-number/images/me.png` instead of `http://res.cloudinary.com/cloud-name/image/upload/version-number/dist/images/me.png`
 
 #### options.imageTypes
 Type: `Array`
@@ -100,7 +107,7 @@ grunt.initConfig({
     files: {
       cwd: 'src/',
       src: 'css/style.css',
-      dest: 'dist/'
+      dest: 'dist/' // Note: this must be a directory!
     },
   },
 });

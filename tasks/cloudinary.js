@@ -16,10 +16,192 @@ var async = require('async');
 
 var patterns = {
   cssUrl: /url\(\s*['"]?([^"'\)]+)["']?\s*\)/gm,
-  htmlImg: /<img[^\>]*[^\>\S]+src=['"]([^'"\)#]+)(#.+)?["']/gm
+  htmlImg: /<img[^\>]*[^\>\S]+src=['"]([^'"\)#]+)(#.+)?["']/gm,
+  htmlScript: /<script.+src=['"]([^"']+)["']/gm,
+  htmlLink: /<link[^\>]+href=['"]([^"']+)["']/gm
 };
 
 module.exports = function(grunt) {
+
+  var replacements1 = [];
+  var functions1 = [];
+  var replacements2 = [];
+  var functions2 = [];
+  var files = this.files;
+
+  function getSrc(match, pattern) {
+    var src = match.replace(pattern, '$1');
+    src = src.substring(0, src.indexOf('#') > 0 ? src.indexOf('#') : src.length);
+    return src;
+  }
+
+  function addCssUrl(file, filepath, fileExtension, content) {
+    // get all url(...) in css file
+    var urls = content.match(patterns.cssUrl);
+    if (urls) {
+      urls.forEach(function(value) {
+        // get url
+        var src = getSrc(value, patterns.cssUrl);
+        src = src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+
+        // get absolute path
+        var absolute = uri(src).absoluteTo(filepath).toString();
+
+        // add to replacements1
+        replacements1.push({
+          file: file,
+          type: fileExtension,
+          source: {
+            match: value,
+            src: src, // original url of source file which shows in file
+            absolute: absolute, // absolute path of file which need to be uploaded
+            result: null, // upload result from Cloudinary
+            upload: true  // upload or not
+          }
+        });
+      });
+    }
+  }
+
+  function addHtmlImg(file, filepath, fileExtension, content) {
+    var imgs = content.match(patterns.htmlImg);
+    if (imgs) {
+      imgs.forEach(function(value) {
+        var src = getSrc(value, patterns.htmlImg);
+        src = src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+
+        // get absolute path
+        var absolute = uri(src).absoluteTo(filepath).toString();
+
+        // add to replacements1
+        replacements1.push({
+          file: file,
+          type: fileExtension,
+          source: {
+            match: value,
+            src: src, // original url of source file which shows in file
+            absolute: absolute, // absolute path of file which need to be uploaded
+            result: null, // upload result from Cloudinary
+            upload: true  // upload or not
+          }
+        });
+      });
+    }
+  }
+
+  function addHtmlScript(file, filepath, fileExtension, content) {
+    var scripts = content.match(patterns.htmlScript);
+    if (scripts) {
+      scripts.forEach(function(value) {
+        var src = getSrc(value, patterns.htmlScript);
+        src = src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+
+        // get absolute path
+        var absolute = uri(src).absoluteTo(filepath).toString();
+
+        // add to replacements1
+        replacements1.push({
+          file: file,
+          type: fileExtension,
+          source: {
+            match: value,
+            src: src, // original url of source file which shows in file
+            absolute: absolute, // absolute path of file which need to be uploaded
+            result: null, // upload result from Cloudinary
+            upload: true  // upload or not
+          }
+        });
+      });
+    }
+  }
+
+  function addHtmlLink(file, filepath, fileExtension, content) {
+    var links = content.match(patterns.htmlLink);
+    if (links) {
+      links.forEach(function(value) {
+        var src = getSrc(value, patterns.htmlLink);
+        src = src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+
+        // get absolute path
+        var absolute = uri(src).absoluteTo(filepath).toString();
+
+        // add to replacements2
+        replacements2.push({
+          file: file,
+          type: fileExtension,
+          source: {
+            match: value,
+            src: src, // original url of source file which shows in file
+            absolute: absolute, // absolute path of file which need to be uploaded
+            result: null, // upload result from Cloudinary
+            upload: true  // upload or not
+          }
+        });
+      });
+    }
+  }
+
+  function makeSameFileUnupload() {
+    for (var i1 = 0; i1 < replacements1.length; i1++) {
+      var r1 = replacements1[i1];
+      for (var i2 = i1 + 1; i2 < replacements1.length; i2++) {
+        var r2 = replacements1[i2];
+        if (r1.source.absolute === r2.source.absolute) {
+          replacements1[i2].source.upload = false;
+        }
+      }
+    }
+  }
+
+  function getPublicId(replacement, options) {
+    var publicId = replacement.source.absolute;
+    if (options.roots) {
+      options.roots.forEach(function(root) {
+        publicId = publicId.replace(root + 
+          (root.endsWith('/') ? '' : '/'), '');
+      });
+      
+    }
+    return publicId.substring(0, publicId.indexOf('.'));
+  }
+
+  function getFileType(replacement, options) {
+    var IMAGE_TYPES = options.imageTypes;
+    var fileExtension = replacement.source.absolute.substring(
+      replacement.source.absolute.lastIndexOf('.') + 1);
+    for (var i = 0; i < IMAGE_TYPES.length; i++) {
+      if (fileExtension === IMAGE_TYPES[i]) {
+        return 'image';
+      }
+    }
+    return 'raw';
+  }
+
+  function createfunctionsFromReplacements(replacements, functions, options) {
+    replacements.forEach(function(replacement) {
+      if (replacement.source.upload) {
+        functions.push(function(callback) {
+          grunt.log.writeln('   ' + 'uploading ' + replacement.source.absolute);
+
+          // upload
+          cloudinary.uploader.upload(replacement.source.absolute, function(result) {
+            replacement.source.result = result;
+            if (!result.error) {
+              grunt.log.writeln('    ' + chalk.green('√') + ' uploaded ' + result.url);
+            } else {
+              grunt.log.writeln('    ' + chalk.red('×') + ' ' + 
+                (result.error.message ? result.error.message : result.error));
+            }
+            callback(null, replacement);
+          }, {
+            public_id: getPublicId(replacement, options),
+            replace: true,
+            resource_type: getFileType(replacement, options)
+          });
+        });
+      }
+    });
+  }
 
   grunt.registerMultiTask('cloudinary', 'Uploads images, fonts, css, js files wto Cloudinary which are referenced in html and css files, and also upgrade these references automatically!', function() {
     var options = this.options({
@@ -37,8 +219,10 @@ module.exports = function(grunt) {
       api_secret: options.account.apiSecret
     });
 
+    /* Phase 1 */
+    grunt.log.writeln('Phase 1');
+
     // itearte all files which contain source files
-    var replacements = [];
     this.files.forEach(function(file) {
       var src = file.src.filter(function(filepath) {
         if (!grunt.file.exists(filepath)) {
@@ -53,97 +237,36 @@ module.exports = function(grunt) {
 
         var fileExtension = filepath.substring(filepath.lastIndexOf('.') + 1);
 
-        switch (fileExtension) {
-          case 'css':
-            // get all url(...) in css file
-            var urls = content.match(patterns.cssUrl);
-            urls.forEach(function(value) {
-              // get url
-              var url = value.replace(patterns.cssUrl, '$1');
-              url = url.substring(0, url.indexOf('#') > 0 ? url.indexOf('#') : url.length);
-              url = url.substring(0, url.indexOf('?') > 0 ? url.indexOf('?') : url.length);
-
-              // get absolute path
-              var absolute = uri(url).absoluteTo(filepath).toString();
-
-              // add to replacements
-              replacements.push({
-                file: file,
-                source: {
-                  match: value,
-                  src: url, // original url of source file which shows in file
-                  absolute: absolute, // absolute path of file which need to be uploaded
-                  result: null, // upload result from Cloudinary
-                  upload: true  // upload or not
-                }
-              });
-            });
-
-            break;
-          default:
-            grunt.log.warn('File ' + filepath + ' ignored, as it is not a css/html file');
-            break;
+        if (fileExtension === 'css') {
+          addCssUrl(file, filepath, fileExtension, content);
+        } else if (fileExtension === 'html' || fileExtension === 'htm') {
+          addHtmlImg(file, filepath, fileExtension, content);
+          addHtmlScript(file, filepath, fileExtension, content);
+          addHtmlLink(file, filepath, fileExtension, content);
+        } else {
+          grunt.log.warn('File ' + filepath + ' ignored, as it is not a css/html file');
         }
-
-        
       });
     });
 
     // do not upload same file
-    for (var i1 = 0; i1 < replacements.length; i1++) {
-      var r1 = replacements[i1];
-      for (var i2 = i1 + 1; i2 < replacements.length; i2++) {
-        var r2 = replacements[i2];
-        if (r1.source.absolute === r2.source.absolute) {
-          replacements[i2].source.upload = false;
-        }
-      }
-    }
+    makeSameFileUnupload();
 
-    var functions = [];
-    replacements.forEach(function(replacement) {
-      if (replacement.source.upload) {
-        functions.push(function(callback) {
-          grunt.log.writeln('   ' + 'uploading ' + replacement.source.absolute);
-
-          // public id
-          var publicId = replacement.source.absolute;
-          if (options.root) {
-            publicId = publicId.replace(options.root + (options.root.endsWith('/') ? '' : '/'), '');
-          }
-          publicId = publicId.substring(0, publicId.indexOf('.'));
-
-          // result type
-          var fileType = 'raw';
-          var IMAGE_TYPES = options.imageTypes;
-          var fileExtension = replacement.source.absolute.substring(replacement.source.absolute.lastIndexOf('.') + 1);
-          for (var i = 0; i < IMAGE_TYPES.length; i++) {
-            if (fileExtension === IMAGE_TYPES[i]) {
-              fileType = 'image';
-              break;
-            }
-          }
-
-          // upload
-          cloudinary.uploader.upload(replacement.source.absolute, function(result) {
-            replacement.source.result = result;
-            if (!result.error) {
-              grunt.log.writeln('    ' + chalk.green('√') + ' uploaded ' + result.url);
-            } else {
-              grunt.log.writeln('    ' + chalk.red('×') + ' ' + (result.error.message ? result.error.message : result.error));
-            }
-            callback(null, replacement);
-          }, {
-            public_id: publicId,
-            replace: true,
-            resource_type: fileType
-          });
-        });
-      }
-    });
+    // process html on the end
+    // var htmls = [];
+    // for (var i = 1; i < replacements1.length; i++) {
+    //   for (var j = 0; j < replacements1.length - i; j++) {
+    //     if (replacements1[j].type === 'htm' || replacements1[j].type === 'html') {
+    //       var temp = replacements1[j + 1];
+    //       replacements1[j + 1] = replacements1[j];
+    //       replacements1[j] = temp;
+    //     }
+    //   }
+    // }
     
-    grunt.log.writeln('Upload files');
-    async.series(functions, function(error, result) {
+    createfunctionsFromReplacements(replacements1, functions1, options);
+
+    function replace(replacements, result) {
       // replace references
       grunt.log.writeln();
       grunt.log.writeln('Replace references');
@@ -176,7 +299,8 @@ module.exports = function(grunt) {
           }
 
           // open new file
-          grunt.log.writeln('   ' + chalk.green('file: ') + replacement.file.src + chalk.green(' -> ') + replacement.file.dest);
+          grunt.log.writeln('   ' + chalk.green('file: ') + replacement.file.src + 
+            chalk.green(' -> ') + replacement.file.dest);
           content = grunt.file.read(replacement.file.src);
 
           lastFile = replacement.file;
@@ -186,17 +310,48 @@ module.exports = function(grunt) {
         if (isReplace) {
           // replace all
           if (!replacement.source.result.error) {
-            grunt.log.writeln('     ' + replacement.source.src + chalk.green(' -> ') + replacement.source.result.url);
+            grunt.log.writeln('     ' + replacement.source.src + 
+              chalk.green(' -> ') + replacement.source.result.url);
             
-            content = content.replace(new RegExp(replacement.source.src, 'g'), replacement.source.result.url);
+            content = content.replace(new RegExp(replacement.source.src, 'g'), 
+              replacement.source.result.url);
           } else {
-            grunt.log.writeln('     ' + replacement.source.src + chalk.red(' no change, because of error'));
+            grunt.log.writeln('     ' + replacement.source.src + 
+              chalk.red(' no change, because of error'));
           }
         }
       });
       grunt.file.write(lastFile.dest, content);
+    }
+    
+    grunt.log.writeln('Upload files');
+    async.series(functions1, function(error, result) {
+      replace(replacements1, result);
 
-      done();
+      /* Phase 2 */
+
+      grunt.log.writeln();
+      grunt.log.writeln('Phase 2');
+
+      replacements2.forEach(function(replacement2) {
+        replacements1.forEach(function(replacement1) {
+          if (replacement2.source.absolute === replacement1.file.src[0]) {
+            replacement2.source.absolute = replacement1.file.dest;
+          }
+          if (replacement2.file.src[0] === replacement1.file.src[0]) {
+            replacement2.file.src[0] = replacement1.file.dest;
+          }
+        });
+      });
+
+      createfunctionsFromReplacements(replacements2, functions2, options);
+
+      async.series(functions2, function(error, result) {
+        replace(replacements2, result);
+
+        done();
+      });
     });
   });
+  
 };
