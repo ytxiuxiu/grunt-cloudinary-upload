@@ -35,16 +35,34 @@ module.exports = function(grunt) {
           
         },
         files: {
-          'tmp/image_url_in_css.css': 'test/fixtures/css/image_url_in_css.css'
+          'tmp/css/image_url_in_css.css': 'test/fixtures/css/image_url_in_css.css'
         },
       },
-      withRootOption: {
+      multipleUrlInCssTest: {
+        files: {
+          'tmp/css/multiple_url_in_css.css': 'test/fixtures/css/multiple_url_in_css.css'
+        },
+      },
+      withRootOptionTest: {
         options: {
           root: 'test/fixtures/'
         },
         files: {
-          'tmp/with_root_option.css': 'test/fixtures/css/image_url_in_css.css'
+          'tmp/css/with_root_option.css': 'test/fixtures/css/image_url_in_css.css'
         }
+      },
+      imageInHtmlTest: {
+        files: {
+          'tmp/index.html': 'test/fixtures/index.html'
+        }
+      },
+      multipleFilesTest: {
+        files: [{
+          expand: true,
+          cwd: 'test/fixtures/',
+          src: ['**/*.css'],
+          dest: 'tmp/'
+        }]
       }
     },
 

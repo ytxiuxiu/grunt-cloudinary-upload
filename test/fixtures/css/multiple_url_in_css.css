@@ -1,0 +1,11 @@
+div.bg1 {
+  background-image: url(../images/me.png);
+}
+
+div.bg2 {
+  background-image: url('../images/me.png');
+}
+
+div.bg3 {
+  background-image: url("../images/me.png");
+}
