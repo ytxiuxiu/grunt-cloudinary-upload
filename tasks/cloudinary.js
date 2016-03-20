@@ -350,7 +350,9 @@ module.exports = function(grunt) {
           }
         }
       });
-      grunt.file.write(lastFile.dest, content);
+      if (lastFile) {
+        grunt.file.write(lastFile.dest, content);
+      }
     }
     
     grunt.log.writeln(' Upload files');
