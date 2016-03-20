@@ -250,13 +250,10 @@ module.exports = function(grunt) {
             if (replacement.source.src === sourcesInOneFile[i].src) {
               isReplace = false;
               break;
-            } else {
-              sourcesInOneFile.push(replacement.source);
             }
           }
-        } else {
-          sourcesInOneFile.push(replacement.source);
         }
+        sourcesInOneFile.push(replacement.source);
       } else {
         // write last file
         if (lastFile) {
@@ -291,10 +288,13 @@ module.exports = function(grunt) {
                 options.account.cloudName + '/image/upload/' + replacement.source.trans);
             }
 
+            var newReference = replacement.source.match;
+            newReference = newReference.replace(replacement.source.src, url);
+
             grunt.log.writeln('     ' + replacement.source.src + 
               chalk.green(' -> ') + url);
 
-            content = content.replace(new RegExp(replacement.source.src, 'g'), url);
+            content = content.split(replacement.source.match).join(newReference);
           } else {
             grunt.log.writeln('     ' + replacement.source.src + 
               chalk.red(' no change, because of error'));
