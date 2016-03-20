@@ -46,7 +46,7 @@ You can also put your account info by using json in `cloudinary-account.json` fi
 
 #### options.account
 Type: `Object`
-Default value: `{}`
+Default value: `grunt.file.readJSON('cloudinary-account.json')`
 
 A object contains your Cloudinary account info.
 
@@ -90,6 +90,14 @@ Type: `Array`
 Default value: `['png', 'jpg', 'jpeg', 'gif']`
 
 A array contains all extension names of images in your project. These kind of files will be uploaded to Cloudinary as an image (`resource_type = 'image'`). In another word, any other kind of files will be uploaded as raw file (`resource_type = 'raw'`). (See: [All upload options](http://cloudinary.com/documentation/node_image_upload#all_upload_options))
+
+#### options.removeVersion
+Type: `Boolean`
+Default value: `false`
+
+The version number will be removed in the url if this option is `true`.
+
+For example, `http://res.cloudinary.com/your-cloud-name/image/upload/some-version/images/me.png` will be replaced by `http://res.cloudinary.com/your-cloud-name/image/upload/images/me.png`.
 
 ### Usage Examples
 

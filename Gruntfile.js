@@ -61,7 +61,8 @@ module.exports = function(grunt) {
           roots: [
             'test/fixtures/',
             'tmp'
-          ]
+          ],
+          removeVersion: true
         },
         files: [{
           expand: true,

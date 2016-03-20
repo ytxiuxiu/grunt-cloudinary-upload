@@ -216,7 +216,8 @@ module.exports = function(grunt) {
       imageTypes: [
         'png', 'jpg', 'jpeg', 'gif'
       ],
-      account: grunt.file.readJSON('cloudinary-account.json')
+      account: grunt.file.readJSON('cloudinary-account.json'),
+      removeVersion: false
     });
 
     var done = this.async();
@@ -294,13 +295,21 @@ module.exports = function(grunt) {
       var lastFile = null;
       var lastSource = null;
       var content = null;
+      var sourcesInOneFile = [];
       replacements.forEach(function(replacement) {
         var isReplace = true;
         if (lastFile && replacement.file.src === lastFile.src) {
-          if (lastSource && replacement.source.src === lastSource.src) {
-            isReplace = false;
+          if (sourcesInOneFile.length !== 0) {
+            for (var i = 0; i < sourcesInOneFile.length; i++) {
+              if (replacement.source.src === sourcesInOneFile[i].src) {
+                isReplace = false;
+                break;
+              } else {
+                sourcesInOneFile.push(replacement.source);
+              }
+            }
           } else {
-            lastSource = replacement.source;
+            sourcesInOneFile.push(replacement.source);
           }
         } else {
           // write last file
@@ -314,7 +323,7 @@ module.exports = function(grunt) {
           content = grunt.file.read(replacement.file.src);
 
           lastFile = replacement.file;
-          lastSource = replacement.source;
+          sourcesInOneFile = [];
         }
 
         if (isReplace) {
@@ -324,11 +333,16 @@ module.exports = function(grunt) {
                 chalk.red(' no change, not be uploaded'));
           } else {
             if (!replacement.source.result.error) {
+              // remove version in url
+              var url = replacement.source.result.url;
+              if (options.removeVersion) {
+                url = url.replace(/\/v[0-9]+/, '');
+              }
+
               grunt.log.writeln('     ' + replacement.source.src + 
-                chalk.green(' -> ') + replacement.source.result.url);
-              
-              content = content.replace(new RegExp(replacement.source.src, 'g'), 
-                replacement.source.result.url);
+                chalk.green(' -> ') + url);
+
+              content = content.replace(new RegExp(replacement.source.src, 'g'), url);
             } else {
               grunt.log.writeln('     ' + replacement.source.src + 
                 chalk.red(' no change, because of error'));
