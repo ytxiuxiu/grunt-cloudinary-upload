@@ -141,14 +141,22 @@ module.exports = function(grunt) {
     }
   }
 
-  function makeSameFileUnupload() {
-    for (var i1 = 0; i1 < replacements1.length; i1++) {
-      var r1 = replacements1[i1];
-      for (var i2 = i1 + 1; i2 < replacements1.length; i2++) {
-        var r2 = replacements1[i2];
+  function makeSameFileUnupload(replacements) {
+    for (var i1 = 0; i1 < replacements.length; i1++) {
+      var r1 = replacements[i1];
+      for (var i2 = i1 + 1; i2 < replacements.length; i2++) {
+        var r2 = replacements[i2];
         if (r1.source.absolute === r2.source.absolute) {
-          replacements1[i2].source.upload = false;
+          replacements[i2].source.upload = false;
         }
+      }
+    }
+  }
+
+  function makeRemoteFileUnupload(replacements) {
+    for (var i = 0; i < replacements.length; i++) {
+      if (replacements[i].source.src.startsWith('http')) {
+        replacements[i].source.upload = false;
       }
     }
   }
@@ -250,7 +258,9 @@ module.exports = function(grunt) {
     });
 
     // do not upload same file
-    makeSameFileUnupload();
+    makeSameFileUnupload(replacements1);
+
+    makeRemoteFileUnupload(replacements1);
 
     // process html on the end
     // var htmls = [];
@@ -269,7 +279,7 @@ module.exports = function(grunt) {
     function replace(replacements, result) {
       // replace references
       grunt.log.writeln();
-      grunt.log.writeln('Replace references');
+      grunt.log.writeln(' Replace references');
 
       // match result to replacements
       for (var i1 = 0; i1 < replacements.length; i1++) {
@@ -309,22 +319,27 @@ module.exports = function(grunt) {
 
         if (isReplace) {
           // replace all
-          if (!replacement.source.result.error) {
+          if (replacement.source.src.startsWith('http')) {
             grunt.log.writeln('     ' + replacement.source.src + 
-              chalk.green(' -> ') + replacement.source.result.url);
-            
-            content = content.replace(new RegExp(replacement.source.src, 'g'), 
-              replacement.source.result.url);
+                chalk.red(' no change, not be uploaded'));
           } else {
-            grunt.log.writeln('     ' + replacement.source.src + 
-              chalk.red(' no change, because of error'));
+            if (!replacement.source.result.error) {
+              grunt.log.writeln('     ' + replacement.source.src + 
+                chalk.green(' -> ') + replacement.source.result.url);
+              
+              content = content.replace(new RegExp(replacement.source.src, 'g'), 
+                replacement.source.result.url);
+            } else {
+              grunt.log.writeln('     ' + replacement.source.src + 
+                chalk.red(' no change, because of error'));
+            }
           }
         }
       });
       grunt.file.write(lastFile.dest, content);
     }
     
-    grunt.log.writeln('Upload files');
+    grunt.log.writeln(' Upload files');
     async.series(functions1, function(error, result) {
       replace(replacements1, result);
 
@@ -332,6 +347,7 @@ module.exports = function(grunt) {
 
       grunt.log.writeln();
       grunt.log.writeln('Phase 2');
+      grunt.log.writeln(' Upload files');
 
       replacements2.forEach(function(replacement2) {
         replacements1.forEach(function(replacement1) {
@@ -345,6 +361,10 @@ module.exports = function(grunt) {
       });
 
       createfunctionsFromReplacements(replacements2, functions2, options);
+
+      makeSameFileUnupload(replacements2);
+
+      makeRemoteFileUnupload(replacements2);
 
       async.series(functions2, function(error, result) {
         replace(replacements2, result);
