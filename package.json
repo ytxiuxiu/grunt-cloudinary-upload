@@ -1,7 +1,7 @@
 {
   "name": "grunt-cloudinary-upload",
   "description": "Uploads image, font, css, js files to Cloudinary which are referenced in html and css files, and also upgrade these references automatically!",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "homepage": "https://github.com/xiuxiu/grunt-cloudinary-upload",
   "author": {
     "name": "Johnny Liu",
