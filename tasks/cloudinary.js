@@ -35,6 +35,14 @@ module.exports = function(grunt) {
     return src;
   }
 
+  function getTrans(src) {
+    return src.indexOf('?') > 0 ? src.substring(src.indexOf('?') + 1) : null;
+  }
+
+  function removeParams(src) {
+    return src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+  }
+
   function addCssUrl(file, filepath, fileExtension, content) {
     // get all url(...) in css file
     var urls = content.match(patterns.cssUrl);
@@ -42,7 +50,8 @@ module.exports = function(grunt) {
       urls.forEach(function(value) {
         // get url
         var src = getSrc(value, patterns.cssUrl);
-        src = src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+        var trans = getTrans(src);
+        src = removeParams(src);
 
         // get absolute path
         var absolute = uri(src).absoluteTo(filepath).toString();
@@ -53,6 +62,7 @@ module.exports = function(grunt) {
           type: fileExtension,
           source: {
             match: value,
+            trans: trans,
             src: src, // original url of source file which shows in file
             absolute: absolute, // absolute path of file which need to be uploaded
             result: null, // upload result from Cloudinary
@@ -68,7 +78,8 @@ module.exports = function(grunt) {
     if (imgs) {
       imgs.forEach(function(value) {
         var src = getSrc(value, patterns.htmlImg);
-        src = src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+        var trans = getTrans(src);
+        src = removeParams(src);
 
         // get absolute path
         var absolute = uri(src).absoluteTo(filepath).toString();
@@ -79,6 +90,7 @@ module.exports = function(grunt) {
           type: fileExtension,
           source: {
             match: value,
+            trans: trans,
             src: src, // original url of source file which shows in file
             absolute: absolute, // absolute path of file which need to be uploaded
             result: null, // upload result from Cloudinary
@@ -94,7 +106,7 @@ module.exports = function(grunt) {
     if (scripts) {
       scripts.forEach(function(value) {
         var src = getSrc(value, patterns.htmlScript);
-        src = src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+        src = removeParams(src);
 
         // get absolute path
         var absolute = uri(src).absoluteTo(filepath).toString();
@@ -120,7 +132,7 @@ module.exports = function(grunt) {
     if (links) {
       links.forEach(function(value) {
         var src = getSrc(value, patterns.htmlLink);
-        src = src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
+        src = removeParams(src);
 
         // get absolute path
         var absolute = uri(src).absoluteTo(filepath).toString();
@@ -211,6 +223,90 @@ module.exports = function(grunt) {
     });
   }
 
+  function replace(replacements, result, options) {
+    // replace references
+    grunt.log.writeln();
+    grunt.log.writeln(' Replace references');
+
+    // match result to replacements
+    for (var i1 = 0; i1 < replacements.length; i1++) {
+      for (var i2 = 0; i2 < result.length; i2++) {
+        if (result[i2].source.absolute === replacements[i1].source.absolute && result) {
+          replacements[i1].source.result = result[i2].source.result;
+        }
+      }
+    }
+    
+    // replace all
+    var lastFile = null;
+    var lastSource = null;
+    var content = null;
+    var sourcesInOneFile = [];
+    replacements.forEach(function(replacement) {
+      var isReplace = true;
+      if (lastFile && replacement.file.src === lastFile.src) {
+        if (sourcesInOneFile.length !== 0) {
+          for (var i = 0; i < sourcesInOneFile.length; i++) {
+            if (replacement.source.src === sourcesInOneFile[i].src) {
+              isReplace = false;
+              break;
+            } else {
+              sourcesInOneFile.push(replacement.source);
+            }
+          }
+        } else {
+          sourcesInOneFile.push(replacement.source);
+        }
+      } else {
+        // write last file
+        if (lastFile) {
+          grunt.file.write(lastFile.dest, content);
+        }
+
+        // open new file
+        grunt.log.writeln('   ' + chalk.green('file: ') + replacement.file.src + 
+          chalk.green(' -> ') + replacement.file.dest);
+        content = grunt.file.read(replacement.file.src);
+
+        lastFile = replacement.file;
+        sourcesInOneFile = [];
+      }
+
+      if (isReplace) {
+        // replace all
+        if (replacement.source.src.startsWith('http')) {
+          grunt.log.writeln('     ' + replacement.source.src + 
+              chalk.red(' no change, not be uploaded'));
+        } else {
+          if (!replacement.source.result.error) {
+            // remove version in url
+            var url = replacement.source.result.url;
+            if (options.removeVersion) {
+              url = url.replace(/\/v[0-9]+/, '');
+            }
+
+            // add transformations
+            if (getFileType(replacement, options) === 'image' && replacement.source.trans) {
+              url = url.replace(options.account.cloudName + '/image/upload', 
+                options.account.cloudName + '/image/upload/' + replacement.source.trans);
+            }
+
+            grunt.log.writeln('     ' + replacement.source.src + 
+              chalk.green(' -> ') + url);
+
+            content = content.replace(new RegExp(replacement.source.src, 'g'), url);
+          } else {
+            grunt.log.writeln('     ' + replacement.source.src + 
+              chalk.red(' no change, because of error'));
+          }
+        }
+      }
+    });
+    if (lastFile) {
+      grunt.file.write(lastFile.dest, content);
+    }
+  }
+
   grunt.registerMultiTask('cloudinary', 'Uploads image, font, css, js files wto Cloudinary which are referenced in html and css files, and also upgrade these references automatically!', function() {
     var options = this.options({
       imageTypes: [
@@ -227,6 +323,11 @@ module.exports = function(grunt) {
       api_key: options.account.apiKey,
       api_secret: options.account.apiSecret
     });
+
+    replacements1 = [];
+    functions1 = [];
+    replacements2 = [];
+    functions2 = [];
 
     /* Phase 1 */
     grunt.log.writeln('Phase 1');
@@ -262,102 +363,12 @@ module.exports = function(grunt) {
     makeSameFileUnupload(replacements1);
 
     makeRemoteFileUnupload(replacements1);
-
-    // process html on the end
-    // var htmls = [];
-    // for (var i = 1; i < replacements1.length; i++) {
-    //   for (var j = 0; j < replacements1.length - i; j++) {
-    //     if (replacements1[j].type === 'htm' || replacements1[j].type === 'html') {
-    //       var temp = replacements1[j + 1];
-    //       replacements1[j + 1] = replacements1[j];
-    //       replacements1[j] = temp;
-    //     }
-    //   }
-    // }
     
     createfunctionsFromReplacements(replacements1, functions1, options);
-
-    function replace(replacements, result) {
-      // replace references
-      grunt.log.writeln();
-      grunt.log.writeln(' Replace references');
-
-      // match result to replacements
-      for (var i1 = 0; i1 < replacements.length; i1++) {
-        for (var i2 = 0; i2 < result.length; i2++) {
-          if (result[i2].source.absolute === replacements[i1].source.absolute && result) {
-            replacements[i1].source.result = result[i2].source.result;
-          }
-        }
-      }
-      
-      // replace all
-      var lastFile = null;
-      var lastSource = null;
-      var content = null;
-      var sourcesInOneFile = [];
-      replacements.forEach(function(replacement) {
-        var isReplace = true;
-        if (lastFile && replacement.file.src === lastFile.src) {
-          if (sourcesInOneFile.length !== 0) {
-            for (var i = 0; i < sourcesInOneFile.length; i++) {
-              if (replacement.source.src === sourcesInOneFile[i].src) {
-                isReplace = false;
-                break;
-              } else {
-                sourcesInOneFile.push(replacement.source);
-              }
-            }
-          } else {
-            sourcesInOneFile.push(replacement.source);
-          }
-        } else {
-          // write last file
-          if (lastFile) {
-            grunt.file.write(lastFile.dest, content);
-          }
-
-          // open new file
-          grunt.log.writeln('   ' + chalk.green('file: ') + replacement.file.src + 
-            chalk.green(' -> ') + replacement.file.dest);
-          content = grunt.file.read(replacement.file.src);
-
-          lastFile = replacement.file;
-          sourcesInOneFile = [];
-        }
-
-        if (isReplace) {
-          // replace all
-          if (replacement.source.src.startsWith('http')) {
-            grunt.log.writeln('     ' + replacement.source.src + 
-                chalk.red(' no change, not be uploaded'));
-          } else {
-            if (!replacement.source.result.error) {
-              // remove version in url
-              var url = replacement.source.result.url;
-              if (options.removeVersion) {
-                url = url.replace(/\/v[0-9]+/, '');
-              }
-
-              grunt.log.writeln('     ' + replacement.source.src + 
-                chalk.green(' -> ') + url);
-
-              content = content.replace(new RegExp(replacement.source.src, 'g'), url);
-            } else {
-              grunt.log.writeln('     ' + replacement.source.src + 
-                chalk.red(' no change, because of error'));
-            }
-          }
-        }
-      });
-      if (lastFile) {
-        grunt.file.write(lastFile.dest, content);
-      }
-    }
     
     grunt.log.writeln(' Upload files');
     async.series(functions1, function(error, result) {
-      replace(replacements1, result);
+      replace(replacements1, result, options);
 
       /* Phase 2 */
 
@@ -383,7 +394,7 @@ module.exports = function(grunt) {
       makeRemoteFileUnupload(replacements2);
 
       async.series(functions2, function(error, result) {
-        replace(replacements2, result);
+        replace(replacements2, result, options);
 
         done();
       });
