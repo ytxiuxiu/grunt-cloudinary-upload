@@ -1,6 +1,6 @@
 # grunt-cloudinary-upload
 
-> Uploads image, font, css, js files to Cloudinary which are referenced in html and css files, and also upgrade these references automatically!
+> Uploads image, font, css, js files which are referenced in html and css files to Cloudinary, and also upgrade these references automatically! Support Cloudinary Image Transformation.
 
 ## Getting Started
 This plugin requires Grunt `~0.4.5`
@@ -41,6 +41,19 @@ grunt.initConfig({
 ```
 
 You can also put your account info by using json in `cloudinary-account.json` file, rather than set it in `options` directively.
+
+### How to use Cloudinary Image Transformation
+
+For Cloudinary Image Transformation usage, see [http://cloudinary.com/documentation/image_transformations](http://cloudinary.com/documentation/image_transformations).
+
+You can simply add transformation chain after the `src` and a `?`.
+
+There are some examples below:
+
+```
+url(../images/me.png?e_oil_paint/r_11)  // url in css
+<img src="../images/me.png?e_oil_paint/r_11"> // img in html
+```
 
 ### Options
 
