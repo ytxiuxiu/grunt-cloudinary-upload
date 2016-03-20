@@ -307,7 +307,7 @@ module.exports = function(grunt) {
     }
   }
 
-  grunt.registerMultiTask('cloudinary', 'Uploads image, font, css, js files wto Cloudinary which are referenced in html and css files, and also upgrade these references automatically!', function() {
+  grunt.registerMultiTask('cloudinary', 'Uploads image, font, css, js files wto Cloudinary which are referenced in html and css files, and also upgrade these references automatically! Support Cloudinary Image Transformation.', function() {
     var options = this.options({
       imageTypes: [
         'png', 'jpg', 'jpeg', 'gif'
