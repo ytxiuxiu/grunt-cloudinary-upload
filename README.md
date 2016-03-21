@@ -1,6 +1,11 @@
 # grunt-cloudinary-upload
 
-> Uploads image, font, css, js files which are referenced in html and css files to Cloudinary, and also upgrade these references automatically! Support Cloudinary Image Transformation.
+> Uploads image, font, css, js files which are referenced in html and css files to Cloudinary, and also upgrades these references automatically! Supports Cloudinary Image Transformations.
+
+## Important
+Please update to 0.4.3, thank you!
+
+0.4.3 has a breaking change. It supports Cloudinary Image Transformations. And some major bugs has been fixed in this version.
 
 ## Getting Started
 This plugin requires Grunt `~0.4.5`
@@ -17,9 +22,18 @@ Once the plugin has been installed, it may be enabled inside your Gruntfile with
 grunt.loadNpmTasks('grunt-cloudinary-upload');
 ```
 
-## The "cloudinary" task
+## Tutorial
 
-### Overview
+### Get a Cloudinary account
+
+Cloudinary is a cloud-based service that provides an end-to-end image management solution including uploads, storage, administration, image manipulation, and delivery.
+
+If you haven't got a Cloudinary account, please go to [here](https://cloudinary.com/users/register/free).
+
+**Note**: Don't forget to verify your email address as it may cause an error later.
+
+### The "cloudinary" task
+
 In your project's Gruntfile, add a section named `cloudinary` to the data object passed into `grunt.initConfig()`.
 
 ```js
@@ -28,9 +42,9 @@ grunt.initConfig({
     options: {
       // Set your Cloudinary account info here
       account: {
-        cloudName: 'your-cloud-name',
-        apiKey: 'your-api-key',
-        apiSecret: 'your-api-secret'
+        cloudName: '<your-cloud-name>',
+        apiKey: '<your-api-key>',
+        apiSecret: '<your-api-secret>'
       }
     },
     your_target: {
@@ -40,11 +54,58 @@ grunt.initConfig({
 });
 ```
 
-You can also put your account info by using json in `cloudinary-account.json` file, rather than set it in `options` directively.
+### Set your Cloudinary account info
 
-### How to use Cloudinary Image Transformation
+There are diffenert ways to set your Cloudinary account info, the first way is to put them in the `options` object directly.
 
-For Cloudinary Image Transformation usage, see [http://cloudinary.com/documentation/image_transformations](http://cloudinary.com/documentation/image_transformations).
+```js
+account: {
+  cloudName: '<your-cloud-name>',
+  apiKey: '<your-api-key>',
+  apiSecret: '<your-api-secret>'
+}
+```
+
+For security reason, you can also put your account info by using json in `cloudinary-account.json` file, rather than set it in `options` directively.
+
+```json
+{
+  "cloudName": "<your-cloud-name>",
+  "apiKey": "<your-api-key>",
+  "apiSecret": "<your-api-secret>"
+}
+```
+
+### Config your target
+
+Please specify all the css and html files which contain references to resource files (including image, font, css, js files) in your target so that these resource files can be uploaded to Cloudinary.
+
+**Note**: not the files you'd like to upload to Cloudinary, but the files contain references to the files you want to upload.
+
+```js
+your_target: {
+  files: [{
+    cwd: 'src/',
+    src: ['css/**/*.css', '**/*.html'],
+    dest: 'dist/' // Note: this must be a directory!
+  }],
+}
+```
+
+You don't need to worry about the order, it can be solved automatically. The whole process will be divided into 2 phases. In the first phase, images, fonts which are referenced in css file and images, js files which are referenced in the html file will be uploaded and the references will be updated. In the second phase, css files which have been altered in the first phase will be uploaded.
+
+**Note**: the `dest` must be a directory unless you only have one file, as all the files matched `src` will be put into this directory.
+
+### Support references
+
+* `url` in css file
+* `<link>` in html file
+* `<img>` in html file
+* `<script>` in html file
+
+### Use Cloudinary Image Transformation
+
+For Cloudinary Image Transformation usage, see [here](http://cloudinary.com/documentation/image_transformations).
 
 You can simply add transformation chain after the `src` and a `?`.
 
@@ -96,7 +157,7 @@ roots: [
 ]
 ```
 
-For example, if you set this option, image file `dist/images/me.png` will be uploaded by `public_id = 'images/me'` instead of `public_id = 'dist/images/me'`. So that your url on Cloudinary will be `http://res.cloudinary.com/cloud-name/image/upload/version-number/images/me.png` instead of `http://res.cloudinary.com/cloud-name/image/upload/version-number/dist/images/me.png`
+For example, if you set this option, image file `dist/images/me.png` will be uploaded by `public_id = 'images/me'` instead of `public_id = 'dist/images/me'`. So that your url on Cloudinary will be `http://res.cloudinary.com/<cloud-name>/image/upload/v<version-number>/images/me.png` instead of `http://res.cloudinary.com/<cloud-name>/image/upload/v<version-number>/dist/images/me.png`
 
 #### options.imageTypes
 Type: `Array`
@@ -110,12 +171,12 @@ Default value: `false`
 
 The version number will be removed in the url if this option is `true`.
 
-For example, `http://res.cloudinary.com/your-cloud-name/image/upload/some-version/images/me.png` will be replaced by `http://res.cloudinary.com/your-cloud-name/image/upload/images/me.png`.
+For example, `http://res.cloudinary.com/<cloud-name>/image/upload/v<version-number>/images/me.png` will be replaced by `http://res.cloudinary.com/<cloud-name>/image/upload/images/me.png`.
 
 ### Usage Examples
 
 #### Default Options
-In this example, the default options are used to do something with whatever, except the account info. So if the `testing` file has the content `url(../images/me.png)`, the generated result would be `url(http://res.cloudinary.com/your-cloud-name/image/upload/some-version/path-to/images/me.png)`.
+In this example, the `src/css/style.css` file has the content `url(../images/me.png)`, the generated result would be `url(http://res.cloudinary.com/<cloud-name>/image/upload/v<version-number>/src/images/me.png)`.
 
 ```js
 grunt.initConfig({
@@ -125,13 +186,93 @@ grunt.initConfig({
         // Account info ...
       }
     },
-    files: {
-      cwd: 'src/',
-      src: 'css/style.css',
-      dest: 'dist/' // Note: this must be a directory!
-    },
+    css: {
+      files: [{
+        cwd: 'src/',
+        src: ['css/style.css'],
+        dest: 'dist/'
+      }]
+    }
   },
 });
+```
+
+#### Remove Version
+In this example, you can remove the `version` from the generated result. The `src/css/style.css` file has the content `url(../images/me.png)`, the generated result would be `url(http://res.cloudinary.com/<cloud-name>/image/upload/src/images/me.png)`.
+
+```js
+grunt.initConfig({
+  cloudinary: {
+    options: {
+      removeVersion: true
+    },
+    css: {
+      files: [{
+        cwd: 'src/',
+        src: ['css/style.css'],
+        dest: 'dist/'
+      }]
+    }
+  },
+});
+```
+
+#### Multiple files
+The example shows a relatively complex environment.
+
+Your Gruntfile
+```js
+grunt.initConfig({
+  cloudinary: {
+    options: {
+      removeVersion: true,
+      roots: ['src/', 'dist/']
+    },
+    css: {
+      files: [{
+        cwd: 'src/',
+        src: ['css/style.css', 'index.html'],
+        dest: 'dist/'
+      }]
+    }
+  },
+});
+```
+
+The original files:
+
+src/css/style.css
+```css
+div.sample {
+  background: url(../images/me.png);
+}
+```
+
+src/index.html
+```html
+<html>
+  <head>
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+</html>
+```
+
+The generated files:
+
+dist/css/style.css
+```css
+div.sample {
+  background: url(http://res.cloudinary.com/<cloud-name>/image/upload/images/me.png);
+}
+```
+
+dist/index.html
+```html
+<html>
+  <head>
+    <link rel="stylesheet" href="http://res.cloudinary.com/<cloud-name>/raw/upload/css/style.css">
+  </head>
+</html>
 ```
 
 ## Contributing
