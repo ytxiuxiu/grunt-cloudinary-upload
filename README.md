@@ -2,11 +2,6 @@
 
 > Uploads image, font, css, js files which are referenced in html and css files to Cloudinary, and also upgrades these references automatically! Supports Cloudinary Image Transformations.
 
-## Important
-Please update to 0.4.3, thank you!
-
-0.4.3 has a breaking change. It supports Cloudinary Image Transformations. And some major bugs has been fixed in this version.
-
 ## Getting Started
 This plugin requires Grunt `~0.4.5`
 

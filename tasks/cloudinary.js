@@ -53,6 +53,9 @@ module.exports = function(grunt) {
         var trans = getTrans(src);
         src = removeParams(src);
 
+        if (src.startsWith('https:') || src.startsWith('http:') || src.startsWith('data:')) {
+          return;
+        }
         // get absolute path
         var absolute = uri(src).absoluteTo(filepath).toString();
 
@@ -165,9 +168,11 @@ module.exports = function(grunt) {
     }
   }
 
-  function makeRemoteFileUnupload(replacements) {
+  function makeSomeFileUnupload(replacements) {
     for (var i = 0; i < replacements.length; i++) {
-      if (replacements[i].source.src.startsWith('http')) {
+      if (replacements[i].source.src.startsWith('http:') || 
+        replacements[i].source.src.startsWith('https:') || 
+        replacements[i].source.src.startsWith('data:')) {
         replacements[i].source.upload = false;
       }
     }
@@ -362,7 +367,7 @@ module.exports = function(grunt) {
     // do not upload same file
     makeSameFileUnupload(replacements1);
 
-    makeRemoteFileUnupload(replacements1);
+    makeSomeFileUnupload(replacements1);
     
     createfunctionsFromReplacements(replacements1, functions1, options);
     
@@ -391,7 +396,7 @@ module.exports = function(grunt) {
 
       makeSameFileUnupload(replacements2);
 
-      makeRemoteFileUnupload(replacements2);
+      makeSomeFileUnupload(replacements2);
 
       async.series(functions2, function(error, result) {
         replace(replacements2, result, options);
