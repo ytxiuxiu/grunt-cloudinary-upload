@@ -17,7 +17,7 @@ var async = require('async');
 var patterns = {
   cssUrl: /url\(\s*['"]?([^"'\)]+)["']?\s*\)/gm,
   htmlImg: /<img[^\>]*[^\>\S]+src=['"]([^'"\)#]+)(#.+)?["']/gm,
-  htmlScript: /<script.+src=['"]([^"']+)["']/gm,
+  htmlScript: /<script[^\]+src=['"]([^"']+)["']/gm,
   htmlLink: /<link[^\>]+href=['"]([^"']+)["']/gm
 };
 
