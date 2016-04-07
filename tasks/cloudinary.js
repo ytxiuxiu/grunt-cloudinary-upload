@@ -17,7 +17,7 @@ var async = require('async');
 var patterns = {
   cssUrl: /url\(\s*['"]?([^"'\)]+)["']?\s*\)/gm,
   htmlImg: /<img[^\>]*[^\>\S]+src=['"]([^'"\)#]+)(#.+)?["']/gm,
-  htmlScript: /<script.+src=['"]([^"']+)["']/gm,
+  htmlScript: /<script[^\>]+src=['"]([^"']*)["']/gm,
   htmlLink: /<link[^\>]+href=['"]([^"']+)["']/gm
 };
 
@@ -43,7 +43,20 @@ module.exports = function(grunt) {
     return src.substring(0, src.indexOf('?') > 0 ? src.indexOf('?') : src.length);
   }
 
-  function addCssUrl(file, filepath, fileExtension, content) {
+  function getAbsolutePath(src, filepath, options) {
+    var absolute = uri(src).absoluteTo(filepath).toString();
+    if (!grunt.file.exists(absolute)) {
+      for (var i = 0, l = options.roots.length; i < l; i++) {
+        absolute = options.roots[i] + '/' + uri(src).absoluteTo(options.roots[i]).toString();
+        if (grunt.file.exists(absolute)) {
+          break;
+        }
+      }
+    }
+    return absolute;
+  }
+
+  function addCssUrl(file, filepath, fileExtension, content, options) {
     // get all url(...) in css file
     var urls = content.match(patterns.cssUrl);
     if (urls) {
@@ -56,9 +69,6 @@ module.exports = function(grunt) {
         if (src.startsWith('https:') || src.startsWith('http:') || src.startsWith('data:')) {
           return;
         }
-        // get absolute path
-        var absolute = uri(src).absoluteTo(filepath).toString();
-
         // add to replacements1
         replacements1.push({
           file: file,
@@ -67,7 +77,7 @@ module.exports = function(grunt) {
             match: value,
             trans: trans,
             src: src, // original url of source file which shows in file
-            absolute: absolute, // absolute path of file which need to be uploaded
+            absolute: getAbsolutePath(src, filepath, options), // absolute path of file which need to be uploaded
             result: null, // upload result from Cloudinary
             upload: true  // upload or not
           }
@@ -76,7 +86,7 @@ module.exports = function(grunt) {
     }
   }
 
-  function addHtmlImg(file, filepath, fileExtension, content) {
+  function addHtmlImg(file, filepath, fileExtension, content, options) {
     var imgs = content.match(patterns.htmlImg);
     if (imgs) {
       imgs.forEach(function(value) {
@@ -84,9 +94,6 @@ module.exports = function(grunt) {
         var trans = getTrans(src);
         src = removeParams(src);
 
-        // get absolute path
-        var absolute = uri(src).absoluteTo(filepath).toString();
-
         // add to replacements1
         replacements1.push({
           file: file,
@@ -95,7 +102,7 @@ module.exports = function(grunt) {
             match: value,
             trans: trans,
             src: src, // original url of source file which shows in file
-            absolute: absolute, // absolute path of file which need to be uploaded
+            absolute: getAbsolutePath(src, filepath, options), // absolute path of file which need to be uploaded
             result: null, // upload result from Cloudinary
             upload: true  // upload or not
           }
@@ -104,15 +111,12 @@ module.exports = function(grunt) {
     }
   }
 
-  function addHtmlScript(file, filepath, fileExtension, content) {
+  function addHtmlScript(file, filepath, fileExtension, content, options) {
     var scripts = content.match(patterns.htmlScript);
     if (scripts) {
       scripts.forEach(function(value) {
         var src = getSrc(value, patterns.htmlScript);
         src = removeParams(src);
-
-        // get absolute path
-        var absolute = uri(src).absoluteTo(filepath).toString();
 
         // add to replacements1
         replacements1.push({
@@ -121,7 +125,7 @@ module.exports = function(grunt) {
           source: {
             match: value,
             src: src, // original url of source file which shows in file
-            absolute: absolute, // absolute path of file which need to be uploaded
+            absolute: getAbsolutePath(src, filepath, options), // absolute path of file which need to be uploaded
             result: null, // upload result from Cloudinary
             upload: true  // upload or not
           }
@@ -130,15 +134,12 @@ module.exports = function(grunt) {
     }
   }
 
-  function addHtmlLink(file, filepath, fileExtension, content) {
+  function addHtmlLink(file, filepath, fileExtension, content, options) {
     var links = content.match(patterns.htmlLink);
     if (links) {
       links.forEach(function(value) {
         var src = getSrc(value, patterns.htmlLink);
         src = removeParams(src);
-
-        // get absolute path
-        var absolute = uri(src).absoluteTo(filepath).toString();
 
         // add to replacements2
         replacements2.push({
@@ -147,7 +148,7 @@ module.exports = function(grunt) {
           source: {
             match: value,
             src: src, // original url of source file which shows in file
-            absolute: absolute, // absolute path of file which need to be uploaded
+            absolute: getAbsolutePath(src, filepath, options), // absolute path of file which need to be uploaded
             result: null, // upload result from Cloudinary
             upload: true  // upload or not
           }
@@ -317,6 +318,7 @@ module.exports = function(grunt) {
       imageTypes: [
         'png', 'jpg', 'jpeg', 'gif'
       ],
+      roots: [],
       account: grunt.file.readJSON('cloudinary-account.json'),
       removeVersion: false
     });
@@ -353,14 +355,15 @@ module.exports = function(grunt) {
         var fileExtension = filepath.substring(filepath.lastIndexOf('.') + 1);
 
         if (fileExtension === 'css') {
-          addCssUrl(file, filepath, fileExtension, content);
+          addCssUrl(file, filepath, fileExtension, content, options);
         } else if (fileExtension === 'html' || fileExtension === 'htm') {
-          addHtmlImg(file, filepath, fileExtension, content);
-          addHtmlScript(file, filepath, fileExtension, content);
-          addHtmlLink(file, filepath, fileExtension, content);
+          addHtmlImg(file, filepath, fileExtension, content, options);
+          addHtmlScript(file, filepath, fileExtension, content, options);
+          addHtmlLink(file, filepath, fileExtension, content, options);
         } else {
           grunt.log.warn('File ' + filepath + ' ignored, as it is not a css/html file');
         }
+        grunt.file.write(file.dest, content); // write to all file to the dest first
       });
     });
 
