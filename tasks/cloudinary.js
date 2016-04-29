@@ -210,20 +210,39 @@ module.exports = function(grunt) {
           grunt.log.writeln('   ' + 'uploading ' + replacement.source.absolute);
 
           // upload
-          cloudinary.uploader.upload(replacement.source.absolute, function(result) {
-            replacement.source.result = result;
-            if (!result.error) {
-              grunt.log.writeln('    ' + chalk.green('√') + ' uploaded ' + result.url);
-            } else {
-              grunt.log.writeln('    ' + chalk.red('×') + ' ' + 
-                (result.error.message ? result.error.message : result.error));
-            }
-            callback(null, replacement);
-          }, {
-            public_id: getPublicId(replacement, options),
-            replace: true,
-            resource_type: getFileType(replacement, options)
-          });
+          var count = 1;
+          function upload() {
+            cloudinary.uploader.upload(replacement.source.absolute, function(result) {
+              replacement.source.result = result;
+              if (!result.error) {
+                grunt.log.writeln('    ' + chalk.green('√') + ' uploaded ' + result.url);
+                callback(null, replacement);
+              } else {
+                var error = result.error.message ? result.error.message : result.error;
+
+                grunt.log.writeln('    ' + chalk.red('×') + ' ' + error);
+                
+                if (!error.includes('no such file')) {
+                  if (count <= 3) {
+                    grunt.log.writeln('    ' + chalk.red('-') + ' retry [' + count + ']');
+                    upload();
+                    count++;
+                  } else {
+                    grunt.fail.fatal('Could not upload ' + replacement.source.absolute);
+                  }
+                } else {
+                  grunt.log.writeln('    ' + chalk.red('-') + ' ignored');
+                  callback(null, replacement);
+                }
+              }
+              
+            }, {
+              public_id: getPublicId(replacement, options),
+              replace: true,
+              resource_type: getFileType(replacement, options)
+            });
+          };
+          upload();
         });
       }
     });
