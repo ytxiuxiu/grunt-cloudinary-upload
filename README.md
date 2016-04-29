@@ -89,6 +89,8 @@ your_target: {
 
 You don't need to worry about the order, it can be solved automatically. The whole process will be divided into 2 phases. In the first phase, images, fonts which are referenced in css file and images, js files which are referenced in the html file will be uploaded and the references will be updated. In the second phase, css files which have been altered in the first phase will be uploaded.
 
+**Note**: the non-exist assests will be ignored by `grunt-cloudinary-upload`.
+
 **Note**: the `dest` must be a directory unless you only have one file, as all the files matched `src` will be put into this directory.
 
 ### Support references
