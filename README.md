@@ -270,8 +270,5 @@ dist/index.html
 </html>
 ```
 
-## Contributing
-_(Nothing yet)_
-
 ## Release History
-_(Nothing yet)_
+**4.4.5**: Add 3-time retry during uploading
